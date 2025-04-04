@@ -1,0 +1,137 @@
+// schema.prisma
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  
+}
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x","rhel-openssl-3.0.x","rhel-openssl-1.1.x"]
+  
+
+}
+
+model Firma {
+  id          Int        @id @default(autoincrement())
+  firmaKodu   Int        @unique
+  firmaAdi    String
+  adres       String
+  il          String
+  ilce        String
+  telefon     String
+  email       String
+  yetkili     String
+  isgkSicilNo String
+  yerleskeler Yerleske[]
+  calisanlar  Calisan[]
+  naceId         Int
+  nace           Nace     @relation(fields: [naceId], references: [id])
+  evraklar    FirmaEvrak[]
+}
+
+model FirmaEvrakKategori {
+  id           Int               @id @default(autoincrement())
+  isim         String            
+  evraklar     FirmaEvrak[] 
+}
+
+model FirmaEvrak {
+  id           Int               @id @default(autoincrement())
+  firmaId      Int
+  kategoriId   Int
+  evrakTuru    String
+  dosyaYolu    String
+  dosyaAdi     String
+  yuklenmeTarihi DateTime        @default(now())   
+  firma        Firma             @relation(fields: [firmaId], references: [id])
+  kategori     FirmaEvrakKategori @relation(fields: [kategoriId], references: [id])
+}
+
+model Yerleske {
+  id            Int       @id @default(autoincrement())
+  firmaId       Int
+  subeAdi       String
+  adres         String
+  telefon       String
+  yetkili       String
+  sgkSicilNo    String
+  firma         Firma     @relation(fields: [firmaId], references: [id])
+  calisanlar    Calisan[]
+  naceId         Int
+  nace           Nace     @relation(fields: [naceId], references: [id])
+}
+
+model Calisan {
+  id              Int       @id @default(autoincrement())
+  adi             String
+  soyadi          String
+  tc_no           String    @unique
+  meslegi         String
+  firmaId         Int
+  firmaYerleskeId Int?
+  isegiristarihi  DateTime
+  isecikistaarihi DateTime?
+  aktif           Boolean
+  yerleske        Yerleske?  @relation(fields: [firmaYerleskeId], references: [id])
+  firma           Firma     @relation(fields: [firmaId], references: [id])
+  egitimler       Egitim[]
+  saglikRaporlari   SaglikRapor[]
+  sertifikalar      Sertifika[]
+}
+
+model Kategori {
+  id          Int          @id @default(autoincrement())
+  isim        String       // Kategori adı (ör. Genel Konular, Sağlık Konuları)
+  egitimKonular EgitimKonu[]
+}
+
+model EgitimKonu {
+  id          Int          @id @default(autoincrement())
+  baslik      String       // Eğitim konusu başlığı (ör. Çalışma mevzuatı ile ilgili bilgiler)
+  aciklama    String?      // Konuya ilişkin açıklama
+  kategoriId  Int          // Kategorinin ID'si
+  kategori    Kategori     @relation(fields: [kategoriId], references: [id])
+  egitimler   Egitim[]
+}
+
+model Egitim {
+  id             Int       @id @default(autoincrement())
+  calisanId      Int
+  egitimKonuId   Int
+  egitimTarihi   DateTime
+  gecerlilikTarihi DateTime
+  sure           Int       // Eğitim süresi (saat cinsinden)
+  belge          String?   // Eğitim belgesi (URL veya dosya adı)
+  calisan        Calisan   @relation(fields: [calisanId], references: [id])
+  egitimKonu     EgitimKonu @relation(fields: [egitimKonuId], references: [id])
+}
+
+model SaglikRapor {
+  id                Int      @id @default(autoincrement())
+  calisanId         Int
+  calisan           Calisan  @relation(fields: [calisanId], references: [id])
+  raporUrl          String   // Sağlık raporu dosyasının URL'si
+  gecerlilikTarihi  DateTime
+  yuklemeTarihi     DateTime @default(now()) // Yükleme tarihi otomatik atanır
+}
+
+model Sertifika {
+  id                Int      @id @default(autoincrement())
+  calisanId         Int
+  calisan           Calisan  @relation(fields: [calisanId], references: [id])
+  sertifikaUrl      String   // Sertifika dosyasının URL'si
+  gecerlilikTarihi  DateTime
+  yuklemeTarihi     DateTime @default(now()) // Yükleme tarihi otomatik atanır
+}
+model Nace {
+  id             Int      @id @default(autoincrement())
+  kod           String   @unique
+  tanim         String
+  tehlikeSinifi String
+  firmalar       Firma[]
+  yerleskeler    Yerleske[]
+
+}
